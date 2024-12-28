@@ -32,7 +32,13 @@ Run it with the `-y` flag to automatically commit the changes directly without b
  1 file changed, 22 insertions(+), 7 deletions(-)
 ```
 
-It will use your [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to generate the corresponding commit message but you can override that with the `--model` (`-m`) flag.
+It will use your [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to generate the corresponding commit message but you can override that with the `--model` (`-m`) flag:
+
+```
+% llm commit -m llama3.2:3b -a -y
+[main 0e014b1] Update README to include model customization option
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+```
 
 ### Staged Changes
 
