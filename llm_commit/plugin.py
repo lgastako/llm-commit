@@ -82,11 +82,14 @@ class GitSCM(SCM):
     @cached_property
     def _staged_changes_status(self) -> StagedChangesStatus:
         result = subprocess.run(["git", "status"], capture_output=True, text=True)
+        # print(f"git status result.stdout: {result.stdout}")
         if result.returncode != 0:
             raise click.ClickException("Failed to get staged changes")
         # print(result)
-        to_be_committed = "to be commited:" in result.stdout
+        to_be_committed = "to be committed:" in result.stdout
         not_staged_for_commit = "not staged for commit:" in result.stdout
+        # print(f"to_be_committed: {to_be_committed}")
+        # print(f"not_staged_for_commit: {not_staged_for_commit}")
         if to_be_committed:
             if not_staged_for_commit:
                 return StagedChangesStatus.SOME
