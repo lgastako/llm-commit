@@ -96,17 +96,15 @@ class GitSCM(SCM):
     ) -> Tuple[str, List[str]]:
         extra_args = []
         changes_status = self._staged_changes_status(_repo_path)
-        print(f"get_command: {changes_status}")
+        # print(f"get_command: {changes_status}")
         if changes_status == StagedChangesStatus.NO_CHANGES:
             click.ClickException("No changes to commit")
-        print("pre force_all check")
         if force_all:
             extra_args.append("-a")
         elif changes_status == StagedChangesStatus.NONE:
             extra_args.append("-a")
-        print("post force_all check")
         result = ["git", "commit", "-m", "{}", *extra_args]
-        print(f"get_command result: {result}")
+        # print(f"get_command result: {result}")
         return result
 
     @lru_cache(maxsize=None)
