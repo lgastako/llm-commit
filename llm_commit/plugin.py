@@ -215,6 +215,50 @@ class SvnSCM(SCM):
         return False
 
 
+class CvsSCM(SCM):
+    __scm_type__ = "cvs"
+
+    def detect_scm(self, repo_path: str) -> str:
+        if os.path.exists(os.path.join(repo_path, "CVS")):
+            return "cvs"
+        return None
+
+    def get_changes(self, repo_path: str) -> str:
+        # CVS doesn't have a staging area, show all local modifications
+        command = ["cvs", "diff"]
+        result = subprocess.run(command, cwd=repo_path, capture_output=True, text=True)
+        if result.returncode not in [0, 1]:  # CVS diff returns 1 if differences found
+            raise click.ClickException("Failed to get changes")
+        if result.stdout.strip() == "":
+            raise click.ClickException("No changes found")
+        return result.stdout
+
+    def get_command(
+        self, repo_path: str, force_all: bool = False
+    ) -> Tuple[str, List[str]]:
+        if self._staged_changes_status(repo_path) == StagedChangesStatus.NO_CHANGES:
+            raise click.ClickException("No changes to commit")
+        # CVS commits all changes by default
+        return ["cvs", "commit", "-m", "{}"]
+
+    @lru_cache(maxsize=None)
+    def _staged_changes_status(self, repo_path: str) -> StagedChangesStatus:
+        result = subprocess.run(
+            ["cvs", "status"], cwd=repo_path, capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            raise click.ClickException("Failed to get status")
+
+        if "Locally Modified" not in result.stdout:
+            return StagedChangesStatus.NO_CHANGES
+
+        # CVS doesn't have a staging area, so any modified files are considered "staged"
+        return StagedChangesStatus.ALL
+
+    def commits_silently(self) -> bool:
+        return False
+
+
 @llm.hookimpl
 def register_commands(cli):
     @cli.command()
@@ -239,7 +283,7 @@ def register_commands(cli):
 
         # Try Git first, then Mercurial
         scm = None
-        scm_classes = [GitSCM, MercurialSCM, SvnSCM]
+        scm_classes = [GitSCM, MercurialSCM, SvnSCM, CvsSCM]
         for scm_class in scm_classes:
             scm = scm_class()
             if scm.detect_scm(path) is not None:
