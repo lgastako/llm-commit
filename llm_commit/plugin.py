@@ -259,6 +259,48 @@ class CvsSCM(SCM):
         return False
 
 
+class DarcsSCM(SCM):
+    __scm_type__ = "darcs"
+
+    def detect_scm(self, repo_path: str) -> str:
+        if os.path.exists(os.path.join(repo_path, "_darcs")):
+            return "darcs"
+        return None
+
+    def get_changes(self, repo_path: str) -> str:
+        # Darcs shows all changes with whatsnew command
+        command = ["darcs", "whatsnew", "--unified"]
+        result = subprocess.run(command, cwd=repo_path, capture_output=True, text=True)
+        if result.returncode not in [0, 1]:  # darcs whatsnew returns 1 if changes found
+            raise click.ClickException("Failed to get changes")
+        if result.stdout.strip() == "":
+            raise click.ClickException("No changes found")
+        return result.stdout
+
+    def get_command(
+        self, repo_path: str, force_all: bool = False
+    ) -> Tuple[str, List[str]]:
+        if self._staged_changes_status(repo_path) == StagedChangesStatus.NO_CHANGES:
+            raise click.ClickException("No changes to commit")
+        # Darcs records all changes by default
+        return ["darcs", "record", "-a", "-m", "{}"]
+
+    @lru_cache(maxsize=None)
+    def _staged_changes_status(self, repo_path: str) -> StagedChangesStatus:
+        result = subprocess.run(
+            ["darcs", "whatsnew"], cwd=repo_path, capture_output=True, text=True
+        )
+        if result.returncode == 1:  # Changes exist
+            return StagedChangesStatus.ALL
+        elif result.returncode == 0:  # No changes
+            return StagedChangesStatus.NO_CHANGES
+        else:
+            raise click.ClickException("Failed to get status")
+
+    def commits_silently(self) -> bool:
+        return False
+
+
 @llm.hookimpl
 def register_commands(cli):
     @cli.command()
@@ -283,7 +325,7 @@ def register_commands(cli):
 
         # Try Git first, then Mercurial
         scm = None
-        scm_classes = [GitSCM, MercurialSCM, SvnSCM, CvsSCM]
+        scm_classes = [GitSCM, MercurialSCM, SvnSCM, CvsSCM, DarcsSCM]
         for scm_class in scm_classes:
             scm = scm_class()
             if scm.detect_scm(path) is not None:
