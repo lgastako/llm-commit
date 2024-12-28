@@ -44,7 +44,20 @@ If you have staged changes and you want to commit all changes including
 unstaged changes, you can use the -a flag:
 
 ```
-llm commit -a
+% git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   README.md
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   llm_commit/plugin.py
+
+% llm commit -a
 TODO fill in output here
 ```
 
@@ -54,9 +67,12 @@ TODO fill in output here
 
 - [Git](https://git-scm.com/)
 
-# Planned
+# In progress
 
 - [Mercurial (Hg)](https://www.mercurial-scm.org/)
+
+# Planned
+
 - [SVN](https://subversion.apache.org/)
 - [CVS](https://www.nongnu.org/cvs/)
 - [Darcs](https://www.darcs.net/)

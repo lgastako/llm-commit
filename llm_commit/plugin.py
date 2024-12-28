@@ -19,6 +19,7 @@ Generate a concise and descriptive Git commit message following these rules:
 - Focus on WHAT and WHY, not HOW
 - Do not include any markdown, quotes, or other formatting
 - Return only the commit message text, nothing else
+- If there are 3 or less files touched, say something about each file
 
 For example, if the changes are: Added user authentication with JWT
 You return only: Add JWT-based user authentication system
@@ -104,9 +105,7 @@ class GitSCM(SCM):
 
 @llm.hookimpl
 def register_commands(cli):
-    @cli.command(
-        name="commit"
-    )  # TODO once it's working see if I can remove the name and it'll default properly)
+    @cli.command()
     @click.option("-m", "--model", default=None, help="Specify the model to use")
     @click.option("-s", "--system", help="Custom system prompt")
     @click.option("-p", "--path", help="Path to the repository")
