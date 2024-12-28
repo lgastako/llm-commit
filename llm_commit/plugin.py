@@ -209,10 +209,10 @@ def register_commands(cli):
         full_command_str = insert_message(command, reply)
         # print(f"full_command_str: {full_command_str}")
         if not yes:
-            interactive_exec(full_command_str)
+            interactive_exec(path, full_command_str)
         else:
             # print(f"Running: {full_command_str}")
-            subprocess.run(full_command_str, shell=True)
+            subprocess.run(full_command_str, shell=True, cwd=path)
 
 
 def escape(s):
@@ -238,7 +238,7 @@ def insert_message(command, message):
     return " ".join(command)
 
 
-def interactive_exec(command):
+def interactive_exec(repo_path: str, command: str):
     if isinstance(command, list):
         command = " ".join(command)
     # print(f"interactive_exec: {command}")
@@ -251,7 +251,10 @@ def interactive_exec(command):
             edited_command = session.prompt("> ", default=command)
     try:
         output = subprocess.check_output(
-            edited_command, shell=True, stderr=subprocess.STDOUT
+            cwd=repo_path,
+            shell=True,
+            stderr=subprocess.STDOUT,
+            input=edited_command,
         )
         print(output.decode())
     except subprocess.CalledProcessError as e:
