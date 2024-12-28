@@ -82,5 +82,4 @@ If your favorite SCM system isn't on the list, please let me know.
 
 ## TODO
 
-- [ ] Fix bug when `-a` isn't passed and there are no staged changes
 - [ ] Prevent it from pulling in changes to lock files, etc.
