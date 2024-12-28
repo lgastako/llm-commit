@@ -103,6 +103,51 @@ class GitSCM(SCM):
         return StagedChangesStatus.NO_CHANGES
 
 
+class MercurialSCM(SCM):
+    __scm_type__ = "hg"
+
+    def detect_scm(self) -> str:
+        repo_path = os.getcwd()
+        if os.path.exists(os.path.join(repo_path, ".hg")):
+            return "hg"
+        return None
+
+    def get_changes(self) -> str:
+        command = ["hg", "diff"]
+        match self._staged_changes_status:
+            case StagedChangesStatus.NONE:
+                pass
+            case StagedChangesStatus.SOME:
+                # Mercurial doesn't have staging area like Git
+                # Show only changes that are added
+                command.extend(["-w", "--change", "."])
+            case StagedChangesStatus.ALL:
+                command.extend(["-w", "--change", "."])
+            case StagedChangesStatus.NO_CHANGES:
+                raise click.ClickException("No changes found")
+        result = subprocess.run(command, capture_output=True, text=True)
+        return result.stdout
+
+    def get_command(self, force_all: bool = False) -> str:
+        if self._staged_changes_status == StagedChangesStatus.NO_CHANGES:
+            click.ClickException("No changes to commit")
+        # Mercurial automatically commits all changes, no need for -a flag
+        return ["hg", "commit", "-m", "{}"]
+
+    @cached_property
+    def _staged_changes_status(self) -> StagedChangesStatus:
+        result = subprocess.run(["hg", "status"], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise click.ClickException("Failed to get status")
+
+        if not result.stdout.strip():
+            return StagedChangesStatus.NO_CHANGES
+
+        # In Mercurial, all modified files are automatically "staged"
+        # So we only have ALL or NO_CHANGES states
+        return StagedChangesStatus.ALL
+
+
 @llm.hookimpl
 def register_commands(cli):
     @cli.command()
@@ -123,12 +168,21 @@ def register_commands(cli):
         "Use an LLM to generate a commit message"
         from llm.cli import get_default_model
 
-        # TODO something with args?
         path = path or os.getcwd()
 
-        scm = GitSCM()
-        if scm.detect_scm() is None:
-            raise click.ClickException("Unknown SCM")
+        # Try Git first, then Mercurial
+        scm = None
+        scm_classes = [GitSCM, MercurialSCM]
+        for scm_class in scm_classes:
+            scm = scm_class()
+            if scm.detect_scm() is not None:
+                break
+
+        if scm is None:
+            supported_scms = ", ".join([scm.__scm_type__ for scm in scm_classes])
+            raise click.ClickException(
+                f"No supported SCM found (supported scms: {supported_scms}"
+            )
 
         command = scm.get_command(force_all=all)
         changes = scm.get_changes()
