@@ -70,15 +70,11 @@ Changes not staged for commit:
 - [Mercurial (Hg)](https://www.mercurial-scm.org/)
 - [SVN](https://subversion.apache.org/)
 - [CVS](https://www.nongnu.org/cvs/)
-
-# Planned
-
 - [Darcs](https://www.darcs.net/)
 
 If your favorite SCM system isn't on the list, please let me know.
 
 ## TODO
 
+- [ ] Fix bug when -a isn't passed and there are no staged changes
 - [ ] Prevent it from pulling in changes to lock files, etc.
-- [ ] Add support for other SCM systems
-- [ ] Implement -y flag to automatically commit the changes

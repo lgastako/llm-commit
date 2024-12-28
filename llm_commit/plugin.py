@@ -281,18 +281,21 @@ class DarcsSCM(SCM):
         self, repo_path: str, force_all: bool = False
     ) -> Tuple[str, List[str]]:
         if self._staged_changes_status(repo_path) == StagedChangesStatus.NO_CHANGES:
-            raise click.ClickException("No changes to commit")
+            raise click.ClickException("No changes to commit (in get_command)")
         # Darcs records all changes by default
         return ["darcs", "record", "-a", "-m", "{}"]
 
     @lru_cache(maxsize=None)
     def _staged_changes_status(self, repo_path: str) -> StagedChangesStatus:
         result = subprocess.run(
-            ["darcs", "whatsnew"], cwd=repo_path, capture_output=True, text=True
+            ["darcs", "whatsnew", "--unified"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
         )
-        if result.returncode == 1:  # Changes exist
+        if result.returncode == 0:  # Changes exist
             return StagedChangesStatus.ALL
-        elif result.returncode == 0:  # No changes
+        elif result.returncode == 1:  # No changes
             return StagedChangesStatus.NO_CHANGES
         else:
             raise click.ClickException("Failed to get status")
