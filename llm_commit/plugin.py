@@ -72,6 +72,8 @@ class GitSCM(SCM):
             case StagedChangesStatus.NO_CHANGES:
                 raise click.ClickException("No changes found")
         result = subprocess.run(command, cwd=repo_path, capture_output=True, text=True)
+        if result.stdout.strip() == "":
+            raise click.ClickException("No changes found")
         return result.stdout
 
     def get_command(
