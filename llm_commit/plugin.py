@@ -131,7 +131,7 @@ def register_commands(cli):
         if not isinstance(reply, str):
             raise Exception("reply Expected a string, got: " + str(type(reply)))
         full_command_str = insert_message(command, reply)
-        print(f"full_command_str: {full_command_str}")
+        # print(f"full_command_str: {full_command_str}")
         interactive_exec(full_command_str)
 
 
@@ -161,7 +161,7 @@ def insert_message(command, message):
 def interactive_exec(command):
     if isinstance(command, list):
         command = " ".join(command)
-    print(f"interactive_exec: {command}")
+    # print(f"interactive_exec: {command}")
     session = PromptSession(lexer=PygmentsLexer(BashLexer))
     with patch_stdout():
         if "\n" in command:
