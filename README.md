@@ -67,9 +67,6 @@ Changes not staged for commit:
 # Currently Supported
 
 - [Git](https://git-scm.com/)
-
-# In progress
-
 - [Mercurial (Hg)](https://www.mercurial-scm.org/)
 
 # Planned
