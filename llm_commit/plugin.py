@@ -48,7 +48,9 @@ class SCM(ABC):
         pass
 
     @abstractmethod
-    def get_command(self, force_all: bool = False) -> str:
+    def get_command(
+        self, repo_path: str, force_all: bool = False
+    ) -> Tuple[str, List[str]]:
         pass
 
 
@@ -251,12 +253,13 @@ def interactive_exec(repo_path: str, command: str):
             edited_command = session.prompt("> ", default=command, multiline=True)
         else:
             edited_command = session.prompt("> ", default=command)
+    print(f"edited_command: {edited_command}")
     try:
         output = subprocess.check_output(
+            edited_command,
             cwd=repo_path,
             shell=True,
             stderr=subprocess.STDOUT,
-            input=edited_command,
         )
         print(output.decode())
     except subprocess.CalledProcessError as e:
