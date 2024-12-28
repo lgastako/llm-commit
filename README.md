@@ -24,12 +24,12 @@ Run `llm commit` like this:
 And it will generate the command to commit the changes with
 and autogenerate message which you can accept, edit, or reject.
 
-TODO: Run it with the -y flag to automatically commit the changes:
+Run it with the -y flag to automatically commit the changes:
 
 ```
 % llm commit -y
-[main 6a72485] Update command handling to properly quote messages
- 1 file changed, 24 insertions(+), 3 deletions(-)
+[main 98c22b3] Add force commit option to skip prompts and commit all changes
+ 1 file changed, 22 insertions(+), 7 deletions(-)
 ```
 
 It will use your [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to generate the corresponding commit message.
