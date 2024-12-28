@@ -44,7 +44,7 @@ class SCM(ABC):
         pass
 
     @abstractmethod
-    def get_command(self) -> str:
+    def get_command(self, force_all: bool = False) -> str:
         pass
 
 
@@ -71,11 +71,13 @@ class GitSCM(SCM):
         result = subprocess.run(command, capture_output=True, text=True)
         return result.stdout
 
-    def get_command(self) -> str:
+    def get_command(self, force_all: bool = False) -> str:
         extra_args = []
         if self._staged_changes_status == StagedChangesStatus.NO_CHANGES:
             click.ClickException("No changes to commit")
-        if self._staged_changes_status == StagedChangesStatus.NONE:
+        if force_all:
+            extra_args.append("-a")
+        elif self._staged_changes_status == StagedChangesStatus.NONE:
             extra_args.append("-a")
         return ["git", "commit", "-m", "{}", *extra_args]
 
@@ -108,8 +110,17 @@ def register_commands(cli):
     @click.option("-m", "--model", default=None, help="Specify the model to use")
     @click.option("-s", "--system", help="Custom system prompt")
     @click.option("-p", "--path", help="Path to the repository")
+    @click.option(
+        "-y",
+        "--yes",
+        is_flag=True,
+        help="Automatically commit the changes, do not prompt for edits",
+    )
+    @click.option(
+        "-a", "--all", is_flag=True, help="Commit all changes, staged or unstaged."
+    )
     @click.option("--key", help="API key to use")
-    def commit(model, system, key, path):
+    def commit(model, system, key, path, yes, all):
         "Use an LLM to generate a commit message"
         from llm.cli import get_default_model
 
@@ -120,7 +131,7 @@ def register_commands(cli):
         if scm.detect_scm() is None:
             raise click.ClickException("Unknown SCM")
 
-        command = scm.get_command()
+        command = scm.get_command(force_all=all)
         changes = scm.get_changes()
         prompt = changes
 
@@ -135,7 +146,11 @@ def register_commands(cli):
             raise Exception("reply Expected a string, got: " + str(type(reply)))
         full_command_str = insert_message(command, reply)
         # print(f"full_command_str: {full_command_str}")
-        interactive_exec(full_command_str)
+        if not yes:
+            interactive_exec(full_command_str)
+        else:
+            print(f"Running: {full_command_str}")
+            subprocess.run(full_command_str, shell=True)
 
 
 def escape(s):
@@ -158,7 +173,7 @@ def insert_message(command, message):
     for index, segment in enumerate(command):
         if segment == "{}":
             command[index] = quote(message)
-    return command
+    return " ".join(command)
 
 
 def interactive_exec(command):
