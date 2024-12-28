@@ -16,16 +16,25 @@ import click
 import llm
 
 SYSTEM_PROMPT = """
-Generate a concise and descriptive Git commit message following these rules:
+Generate a concise and descriptive SCM commit message following these rules:
+
 - Start with a verb in imperative mood (e.g., "Add", "Fix", "Update")
 - Keep the first line under 50 characters
 - Focus on WHAT and WHY, not HOW
 - Do not include any markdown, quotes, or other formatting
 - Return only the commit message text, nothing else
-- If there are 3 or less files touched, say something about each file
+- If there are 3 or less files touched, mention each file's key change
+- Use present tense consistently
+- Be specific about the component being changed
+- For bug fixes, briefly indicate the issue being fixed
+- Avoid vague terms like "improve" or "update" without context
 
-For example, if the changes are: Added user authentication with JWT
-You return only: Add JWT-based user authentication system
+For example:
+If changes are: Added user authentication with JWT tokens in auth.py
+You return only: Add JWT authentication to login endpoint
+
+If changes are: Fixed null pointer in user search
+You return only: Fix crash when searching users with empty query
 """.strip()
 
 
@@ -86,13 +95,19 @@ class GitSCM(SCM):
         self, _repo_path: str, force_all: bool = False
     ) -> Tuple[str, List[str]]:
         extra_args = []
-        if self._staged_changes_status == StagedChangesStatus.NO_CHANGES:
+        changes_status = self._staged_changes_status(_repo_path)
+        print(f"get_command: {changes_status}")
+        if changes_status == StagedChangesStatus.NO_CHANGES:
             click.ClickException("No changes to commit")
+        print("pre force_all check")
         if force_all:
             extra_args.append("-a")
-        elif self._staged_changes_status == StagedChangesStatus.NONE:
+        elif changes_status == StagedChangesStatus.NONE:
             extra_args.append("-a")
-        return ["git", "commit", "-m", "{}", *extra_args]
+        print("post force_all check")
+        result = ["git", "commit", "-m", "{}", *extra_args]
+        print(f"get_command result: {result}")
+        return result
 
     @lru_cache(maxsize=None)
     def _staged_changes_status(self, repo_path: str) -> StagedChangesStatus:
