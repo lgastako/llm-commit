@@ -1,16 +1,19 @@
+from typing import List, Tuple
+
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from functools import cached_property
+from functools import lru_cache
 
 import os
 import subprocess
-import click
-import llm
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.patch_stdout import patch_stdout
 from pygments.lexers.shell import BashLexer
+
+import click
+import llm
 
 SYSTEM_PROMPT = """
 Generate a concise and descriptive Git commit message following these rules:
@@ -37,11 +40,11 @@ class SCM(ABC):
     __scm_type__ = None
 
     @abstractmethod
-    def detect_scm(self) -> str:
+    def detect_scm(self, repo_path: str) -> str:
         pass
 
     @abstractmethod
-    def get_changes(self) -> str:
+    def get_changes(self, repo_path: str) -> str:
         pass
 
     @abstractmethod
@@ -52,13 +55,12 @@ class SCM(ABC):
 class GitSCM(SCM):
     __scm_type__ = "git"
 
-    def detect_scm(self) -> str:
-        repo_path = os.getcwd()
+    def detect_scm(self, repo_path: str) -> str:
         if os.path.exists(os.path.join(repo_path, ".git")):
             return "git"
         return None
 
-    def get_changes(self) -> str:
+    def get_changes(self, repo_path: str) -> str:
         command = ["git", "diff"]
         match self._staged_changes_status:
             case StagedChangesStatus.NONE:
@@ -69,10 +71,12 @@ class GitSCM(SCM):
                 command.append("--cached")
             case StagedChangesStatus.NO_CHANGES:
                 raise click.ClickException("No changes found")
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = subprocess.run(command, cwd=repo_path, capture_output=True, text=True)
         return result.stdout
 
-    def get_command(self, force_all: bool = False) -> str:
+    def get_command(
+        self, _repo_path: str, force_all: bool = False
+    ) -> Tuple[str, List[str]]:
         extra_args = []
         if self._staged_changes_status == StagedChangesStatus.NO_CHANGES:
             click.ClickException("No changes to commit")
@@ -82,9 +86,11 @@ class GitSCM(SCM):
             extra_args.append("-a")
         return ["git", "commit", "-m", "{}", *extra_args]
 
-    @cached_property
-    def _staged_changes_status(self) -> StagedChangesStatus:
-        result = subprocess.run(["git", "status"], capture_output=True, text=True)
+    @lru_cache(maxsize=None)
+    def _staged_changes_status(self, repo_path: str) -> StagedChangesStatus:
+        result = subprocess.run(
+            ["git", "status"], cwd=repo_path, capture_output=True, text=True
+        )
         # print(f"git status result.stdout: {result.stdout}")
         if result.returncode != 0:
             raise click.ClickException("Failed to get staged changes")
@@ -106,13 +112,12 @@ class GitSCM(SCM):
 class MercurialSCM(SCM):
     __scm_type__ = "hg"
 
-    def detect_scm(self) -> str:
-        repo_path = os.getcwd()
+    def detect_scm(self, repo_path: str) -> str:
         if os.path.exists(os.path.join(repo_path, ".hg")):
             return "hg"
         return None
 
-    def get_changes(self) -> str:
+    def get_changes(self, repo_path: str) -> str:
         command = ["hg", "diff"]
         match self._staged_changes_status:
             case StagedChangesStatus.NONE:
@@ -125,18 +130,22 @@ class MercurialSCM(SCM):
                 command.extend(["-w", "--change", "."])
             case StagedChangesStatus.NO_CHANGES:
                 raise click.ClickException("No changes found")
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = subprocess.run(command, cwd=repo_path, capture_output=True, text=True)
         return result.stdout
 
-    def get_command(self, force_all: bool = False) -> str:
-        if self._staged_changes_status == StagedChangesStatus.NO_CHANGES:
+    def get_command(
+        self, repo_path: str, force_all: bool = False
+    ) -> Tuple[str, List[str]]:
+        if self._staged_changes_status(repo_path) == StagedChangesStatus.NO_CHANGES:
             click.ClickException("No changes to commit")
         # Mercurial automatically commits all changes, no need for -a flag
         return ["hg", "commit", "-m", "{}"]
 
-    @cached_property
-    def _staged_changes_status(self) -> StagedChangesStatus:
-        result = subprocess.run(["hg", "status"], capture_output=True, text=True)
+    @lru_cache(maxsize=None)
+    def _staged_changes_status(self, repo_path: str) -> StagedChangesStatus:
+        result = subprocess.run(
+            ["hg", "status"], cwd=repo_path, capture_output=True, text=True
+        )
         if result.returncode != 0:
             raise click.ClickException("Failed to get status")
 
@@ -175,7 +184,7 @@ def register_commands(cli):
         scm_classes = [GitSCM, MercurialSCM]
         for scm_class in scm_classes:
             scm = scm_class()
-            if scm.detect_scm() is not None:
+            if scm.detect_scm(path) is not None:
                 break
 
         if scm is None:
@@ -184,8 +193,8 @@ def register_commands(cli):
                 f"No supported SCM found (supported scms: {supported_scms}"
             )
 
-        command = scm.get_command(force_all=all)
-        changes = scm.get_changes()
+        command = scm.get_command(path, force_all=all)
+        changes = scm.get_changes(path)
         prompt = changes
 
         model = model or get_default_model()
