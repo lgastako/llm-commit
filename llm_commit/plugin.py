@@ -167,6 +167,8 @@ class MercurialSCM(SCM):
         # So we only have ALL or NO_CHANGES states
         return StagedChangesStatus.ALL
 
+    @property
+    @abstractmethod
     def commits_silently(self) -> bool:
         return True
 
@@ -211,6 +213,7 @@ class SvnSCM(SCM):
         # SVN doesn't have a staging area, so any modified files are considered "staged"
         return StagedChangesStatus.ALL
 
+    @property
     def commits_silently(self) -> bool:
         return False
 
@@ -272,7 +275,7 @@ def register_commands(cli):
             # print(f"Running: {full_command_str}")
             subprocess.run(full_command_str, shell=True, cwd=path)
         if scm.commits_silently:
-            print(f"scm {scm.__scm_type__} commits_silently: {scm.commits_silently()}")
+            print(f"scm {scm.__scm_type__} commits_silently: {scm.commits_silently}")
             print(f"Committed changes to {scm.__scm_type__} with message:\n\n{reply}\n")
 
 
