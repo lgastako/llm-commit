@@ -84,7 +84,7 @@ class GitSCM(SCM):
         result = subprocess.run(["git", "status"], capture_output=True, text=True)
         if result.returncode != 0:
             raise click.ClickException("Failed to get staged changes")
-        print(result)
+        # print(result)
         to_be_committed = "to be commited:" in result.stdout
         not_staged_for_commit = "not staged for commit:" in result.stdout
         if to_be_committed:
@@ -127,19 +127,40 @@ def register_commands(cli):
         if model_obj.needs_key:
             model_obj.key = llm.get_key(key, model_obj.needs_key, model_obj.key_env_var)
         result = model_obj.prompt(prompt, system=system or SYSTEM_PROMPT)
-        full_command_str = insert_message(command, result)
+        reply = result.text()
+        if not isinstance(reply, str):
+            raise Exception("reply Expected a string, got: " + str(type(reply)))
+        full_command_str = insert_message(command, reply)
+        print(f"full_command_str: {full_command_str}")
         interactive_exec(full_command_str)
+
+
+def escape(s):
+    return s.replace("'", "'\"'\"")
+
+
+def quote(s):
+    # If there are no single quotes in the string, then we want to wrap it in single quotes
+    # If there are single quotes but no double quotes, then we want to wrap it in double quotes
+    # If there are both then we want to escape the single quotes and wrap it in single quotes
+    if "'" not in s:
+        return f"'{s}'"
+    if '"' not in s:
+        return f'"{s}"'
+    return escape(s)
 
 
 def insert_message(command, message):
     command = command.copy()
     for index, segment in enumerate(command):
         if segment == "{}":
-            command[index] = message
+            command[index] = quote(message)
     return command
 
 
 def interactive_exec(command):
+    if isinstance(command, list):
+        command = " ".join(command)
     print(f"interactive_exec: {command}")
     session = PromptSession(lexer=PygmentsLexer(BashLexer))
     with patch_stdout():
