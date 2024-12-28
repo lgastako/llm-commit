@@ -32,7 +32,7 @@ Run it with the `-y` flag to automatically commit the changes directly without b
  1 file changed, 22 insertions(+), 7 deletions(-)
 ```
 
-It will use your [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to generate the corresponding commit message.
+It will use your [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to generate the corresponding commit message but you can override that with the `--model` (`-m`) flag.
 
 ### Staged Changes
 
