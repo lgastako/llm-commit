@@ -74,7 +74,6 @@ Changes not staged for commit:
 - [SVN](https://subversion.apache.org/)
 - [CVS](https://www.nongnu.org/cvs/)
 - [Darcs](https://www.darcs.net/)
-- [Bazaar](https://www.bazaar.canonical.com/)
 
 If your favorite SCM system isn't on the list, please let me know.
 
