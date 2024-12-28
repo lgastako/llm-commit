@@ -383,6 +383,7 @@ def insert_message(command, message):
     return " ".join(command)
 
 
+# Shamelessly ganked from the llm-cmd plugin
 def interactive_exec(repo_path: str, command: str):
     if isinstance(command, list):
         command = " ".join(command)
