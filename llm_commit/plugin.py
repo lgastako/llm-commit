@@ -148,7 +148,7 @@ def register_commands(cli):
         if not yes:
             interactive_exec(full_command_str)
         else:
-            print(f"Running: {full_command_str}")
+            # print(f"Running: {full_command_str}")
             subprocess.run(full_command_str, shell=True)
 
 

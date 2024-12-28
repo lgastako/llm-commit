@@ -58,7 +58,8 @@ Changes not staged for commit:
 	modified:   llm_commit/plugin.py
 
 % llm commit -a
-TODO fill in output here
+[main 655c761] Update README and improve command registration logic in plugin.py
+ 2 files changed, 20 insertions(+), 5 deletions(-)
 ```
 
 ## SCM Support
