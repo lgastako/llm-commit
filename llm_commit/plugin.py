@@ -275,10 +275,6 @@ def register_commands(cli):
             print(f"Committed changes to {scm.__scm_type__} with message:\n\n{reply}\n")
 
 
-def escape(s):
-    return s.replace("'", "'\"'\"")
-
-
 def quote(s):
     # If there are no single quotes in the string, then we want to wrap it in single quotes
     # If there are single quotes but no double quotes, then we want to wrap it in double quotes
@@ -287,7 +283,7 @@ def quote(s):
         return f"'{s}'"
     if '"' not in s:
         return f'"{s}"'
-    return escape(s)
+    return s.replace("'", "'\"'\"")
 
 
 def insert_message(command, message):
