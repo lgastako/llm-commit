@@ -68,10 +68,10 @@ Changes not staged for commit:
 
 - [Git](https://git-scm.com/)
 - [Mercurial (Hg)](https://www.mercurial-scm.org/)
+- [SVN](https://subversion.apache.org/)
 
 # Planned
 
-- [SVN](https://subversion.apache.org/)
 - [CVS](https://www.nongnu.org/cvs/)
 - [Darcs](https://www.darcs.net/)
 
