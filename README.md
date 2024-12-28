@@ -15,18 +15,21 @@ llm install llm-commit
 Run `llm commit` like this:
 
 ```
-llm commit
-TODO fill in output here
+% llm commit
+> git commit -m 'Update command handling to properly quote messages' -a
+[main 6a72485] Update command handling to properly quote messages
+ 1 file changed, 24 insertions(+), 3 deletions(-)
 ```
 
 And it will generate the command to commit the changes with
 and autogenerate message which you can accept, edit, or reject.
 
-Run it with the -y flag to automatically commit the changes:
+TODO: Run it with the -y flag to automatically commit the changes:
 
 ```
-llm commit -y
-TODO fill in output here
+% llm commit -y
+[main 6a72485] Update command handling to properly quote messages
+ 1 file changed, 24 insertions(+), 3 deletions(-)
 ```
 
 It will use your [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to generate the corresponding commit message.
@@ -65,3 +68,4 @@ If your favorite SCM system isn't on the list, please let me know.
 
 - [ ] Prevent it from pulling in changes to lock files, etc.
 - [ ] Add support for other SCM systems
+- [ ] Implement -y flag to automatically commit the changes
