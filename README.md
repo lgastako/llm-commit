@@ -60,3 +60,8 @@ TODO fill in output here
 - [Bazaar](https://www.bazaar.canonical.com/)
 
 If your favorite SCM system isn't on the list, please let me know.
+
+## TODO
+
+- [ ] Prevent it from pulling in changes to lock files, etc.
+- [ ] Add support for other SCM systems

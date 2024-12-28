@@ -6,8 +6,16 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.1.8",
+    "ipdb>=0.13.13",
+    "llm>=0.19.1",
     "prompt-toolkit>=3.0.48",
+    "pygments>=2.18.0",
 ]
 
-[project.entry-points."llm.plugins"]
+[project.entry-points.llm]
 commit = "llm_commit.plugin"
+
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+]

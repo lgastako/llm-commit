@@ -1,4 +1,6 @@
+from abc import ABC, abstractmethod
 from enum import Enum, auto
+from functools import cached_property
 
 import os
 import subprocess
@@ -9,8 +11,6 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.patch_stdout import patch_stdout
 from pygments.lexers.shell import BashLexer
-
-from llm.plugins import hookimpl
 
 SYSTEM_PROMPT = """
 Generate a concise and descriptive Git commit message following these rules:
@@ -25,80 +25,122 @@ You return only: Add JWT-based user authentication system
 """.strip()
 
 
-@hookimpl
+class StagedChangesStatus(Enum):
+    NONE = auto()  # There are stages, but none are staged for commit
+    SOME = auto()  # Some changes are staged, some are not
+    ALL = auto()  # All changes are staged
+    NO_CHANGES = auto()  # No changes exist
+
+
+class SCM(ABC):
+    __scm_type__ = None
+
+    @abstractmethod
+    def detect_scm(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_changes(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_command(self) -> str:
+        pass
+
+
+class GitSCM(SCM):
+    __scm_type__ = "git"
+
+    def detect_scm(self) -> str:
+        repo_path = os.getcwd()
+        if os.path.exists(os.path.join(repo_path, ".git")):
+            return "git"
+        return None
+
+    def get_changes(self) -> str:
+        command = ["git", "diff"]
+        match self._staged_changes_status:
+            case StagedChangesStatus.NONE:
+                pass
+            case StagedChangesStatus.SOME:
+                command.append("--cached")
+            case StagedChangesStatus.ALL:
+                command.append("--cached")
+            case StagedChangesStatus.NO_CHANGES:
+                raise click.ClickException("No changes found")
+        result = subprocess.run(command, capture_output=True, text=True)
+        return result.stdout
+
+    def get_command(self) -> str:
+        extra_args = []
+        if self._staged_changes_status == StagedChangesStatus.NO_CHANGES:
+            click.ClickException("No changes to commit")
+        if self._staged_changes_status == StagedChangesStatus.NONE:
+            extra_args.append("-a")
+        return ["git", "commit", "-m", "{}", *extra_args]
+
+    @cached_property
+    def _staged_changes_status(self) -> StagedChangesStatus:
+        result = subprocess.run(["git", "status"], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise click.ClickException("Failed to get staged changes")
+        print(result)
+        to_be_committed = "to be commited:" in result.stdout
+        not_staged_for_commit = "not staged for commit:" in result.stdout
+        if to_be_committed:
+            if not_staged_for_commit:
+                return StagedChangesStatus.SOME
+            else:
+                return StagedChangesStatus.ALL
+        elif not_staged_for_commit:
+            return StagedChangesStatus.NONE
+        return StagedChangesStatus.NO_CHANGES
+
+
+@llm.hookimpl
 def register_commands(cli):
-    @cli.command()
+    @cli.command(
+        name="commit"
+    )  # TODO once it's working see if I can remove the name and it'll default properly)
     @click.option("-m", "--model", default=None, help="Specify the model to use")
     @click.option("-s", "--system", help="Custom system prompt")
+    @click.option("-p", "--path", help="Path to the repository")
     @click.option("--key", help="API key to use")
-    def commit(model, system, key):
+    def commit(model, system, key, path):
         "Use an LLM to generate a commit message"
         from llm.cli import get_default_model
 
-        changes = scm_changes()
-        prompt = prompt_from_changes(changes)
+        # TODO something with args?
+        path = path or os.getcwd()
+
+        scm = GitSCM()
+        if scm.detect_scm() is None:
+            raise click.ClickException("Unknown SCM")
+
+        command = scm.get_command()
+        changes = scm.get_changes()
+        prompt = changes
+
         model = model or get_default_model()
         model_id = model or get_default_model()
         model_obj = llm.get_model(model_id)
         if model_obj.needs_key:
             model_obj.key = llm.get_key(key, model_obj.needs_key, model_obj.key_env_var)
         result = model_obj.prompt(prompt, system=system or SYSTEM_PROMPT)
-        interactive_exec(str(result))
-
-        click.echo("Hello world!")
-
-    # def generate_commit_message(args):
-    #     """Generate a commit message using a language model."""
-    #     prompt = f"Write a concise Git commit message for: {args.changes}"
-    #     response = llm.complete(prompt)
-    #     print(response)
-
-    # register_command(
-    #     "commit",
-    #     generate_commit_message,
-    #     description="Generate a Git commit message using LLM",
-    #     arguments=[
-    #         {
-    #             "name": "changes",
-    #             "help": "Changes to generate a commit message for",
-    #             "required": True,
-    #         }
-    #     ],
-    # )
+        full_command_str = insert_message(command, result)
+        interactive_exec(full_command_str)
 
 
-def detect_scm():
-    if os.path.exists(".git"):
-        return "git"
-    return None
-
-
-def scm_changes():
-    scm_type = detect_scm()
-    if scm_type != "git":
-        raise click.ClickException(f"Unsupported SCM: {scm_type}")
-    return git_scm_changes()
-
-
-class StagedChangesStatus(Enum):
-    NONE = auto()  # No changes are staged
-    SOME = auto()  # Some changes are staged, some are not
-    ALL = auto()  # All changes are staged
-
-
-def staged_changes_status():
-    match
-
-
-def git_scm_changes():
-    staged_changes = staged_changes_status()
-    if staged_changes == StagedChangesStatus.NONE:
-        stage_all_changes()
-    changes = get_staged_changes()
-    return changes
+def insert_message(command, message):
+    command = command.copy()
+    for index, segment in enumerate(command):
+        if segment == "{}":
+            command[index] = message
+    return command
 
 
 def interactive_exec(command):
+    print(f"interactive_exec: {command}")
     session = PromptSession(lexer=PygmentsLexer(BashLexer))
     with patch_stdout():
         if "\n" in command:
