@@ -53,6 +53,10 @@ class SCM(ABC):
     ) -> Tuple[str, List[str]]:
         pass
 
+    @abstractmethod
+    def commits_silently(self) -> bool:
+        pass
+
 
 class GitSCM(SCM):
     __scm_type__ = "git"
@@ -112,6 +116,9 @@ class GitSCM(SCM):
             return StagedChangesStatus.NONE
         return StagedChangesStatus.NO_CHANGES
 
+    def commits_silently(self) -> bool:
+        return False
+
 
 class MercurialSCM(SCM):
     __scm_type__ = "hg"
@@ -159,6 +166,9 @@ class MercurialSCM(SCM):
         # In Mercurial, all modified files are automatically "staged"
         # So we only have ALL or NO_CHANGES states
         return StagedChangesStatus.ALL
+
+    def commits_silently(self) -> bool:
+        return True
 
 
 @llm.hookimpl
@@ -217,6 +227,8 @@ def register_commands(cli):
         else:
             # print(f"Running: {full_command_str}")
             subprocess.run(full_command_str, shell=True, cwd=path)
+        if scm.commits_silently:
+            print(f"Committed changes to {scm.__scm_type__} with message:\n\n{reply}\n")
 
 
 def escape(s):
@@ -253,7 +265,7 @@ def interactive_exec(repo_path: str, command: str):
             edited_command = session.prompt("> ", default=command, multiline=True)
         else:
             edited_command = session.prompt("> ", default=command)
-    print(f"edited_command: {edited_command}")
+    # print(f"edited_command: {edited_command}")
     try:
         output = subprocess.check_output(
             edited_command,
