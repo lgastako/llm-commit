@@ -39,7 +39,7 @@ You return only: Fix crash when searching users with empty query
 
 
 class StagedChangesStatus(Enum):
-    NONE = auto()  # There are stages, but none are staged for commit
+    NONE = auto()  # There are changes, but none are staged for commit
     SOME = auto()  # Some changes are staged, some are not
     ALL = auto()  # All changes are staged
     NO_CHANGES = auto()  # No changes exist
